@@ -195,8 +195,9 @@ table.rank{border-collapse:collapse;width:100%;font-size:14.5px}
 .st.futuro{background:color-mix(in srgb,var(--chart) 20%,var(--bg));color:var(--gold)}
 a.btn{text-decoration:none}
 .secth{margin:0 0 10px;font-size:18px}
-body.ro [data-w]{display:none}
-body.ro nav.tabs a:not([href="#eu"]){display:none}
+body.ro [data-w]{display:none!important}
+body.member [data-adm]{display:none!important}
+body.member .mlist select[data-mdir]{display:none}
 body.ro .chk{pointer-events:none}
 .eqr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;margin-bottom:8px}
 /* acompanhamento */
@@ -295,10 +296,11 @@ const TIPO={treino:'Treino',reuniao:'Reunião',evento:'Evento interno',prazo:'Pr
 const STATUS=[['analise','Em análise'],['abertas','Inscrições abertas'],['insc','Inscritos'],['conf','Confirmado'],['fim','Concluído'],['nao','Não vamos']];
 const CASAS=['OG','OO','CG','CO'];
 const CTX={treino:'Treino',campeonato:'Campeonato',interno:'Torneio interno'};
-const COLS=['membros','demandas','eventos','campeonatos','registros','tabbys','diretoria'];
+const COLS=['membros','demandas','eventos','campeonatos','registros','tabbys','diretoria','acesso'];
+const MCOLS=['membros','demandas','eventos','campeonatos','registros','tabbys'];
 const S={};COLS.forEach(c=>S[c]=[]);
 const view=$('#view');
-let db=null,pending=false,modalOpen=false,RO=false;
+let db=null,pending=false,modalOpen=false,RO=false,ADMIN=false;
 const ui={eu:'',dir:'todas',busca:'',calY:new Date().getFullYear(),calM:new Date().getMonth(),calMode:'mes',showFim:false,per:'ano',ctx:'todos',cat:'todos',sort:'pts'};
 
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
@@ -498,13 +500,13 @@ function salaForm(){
 function vMembros(){
   const cnt=id=>S.registros.filter(r=>r.membroId===id).length;
   const list=c=>{const l=S.membros.filter(m=>m.categoria===c).sort((a,b)=>(b.ativo!==false)-(a.ativo!==false)||a.nome.localeCompare(b.nome));
-    return l.length?`<ul class="mlist">${l.map(m=>`<li class="${m.ativo===false?'inativo':''}" data-id="${esc(m.id)}"><span class="mn">${esc(m.nome)}</span><span class="muted nw" style="font-size:13px">${cnt(m.id)} particip.</span><span class="mb"><button class="btn sm" data-act="link" data-w style="${m.email?'':'border-color:var(--chart)'}" title="${esc(m.email||'')}">${m.email?'✓ E-mail':'Definir e-mail'}</button><button class="btn sm" data-act="mv-cat" data-w>${c==='aspira'?'Efetivar':'Tornar aspira'}</button><button class="btn sm" data-act="mv-ativo" data-w>${m.ativo===false?'Reativar':'Inativar'}</button><button class="btn sm ghost danger" data-act="del-m" data-w aria-label="Excluir ${esc(m.nome)}">✕</button></span></li>`).join('')}</ul>`:'<div class="empty">Ninguém aqui ainda.</div>'};
+    return l.length?`<ul class="mlist">${l.map(m=>`<li class="${m.ativo===false?'inativo':''}" data-id="${esc(m.id)}"><span class="mn">${esc(m.nome)}${m.diretoria?` <span class="tag d-${esc(m.diretoria)}" style="margin-left:6px">${esc(DIR[m.diretoria]||"")}</span>`:""}</span><span class="muted nw" style="font-size:13px">${cnt(m.id)} particip.</span><span class="mb"><select class="sm" data-mdir aria-label="Diretoria de ${esc(m.nome)}" style="min-height:34px;padding:2px 6px;font-size:14px">${opt("","Sem diretoria",m.diretoria)}${Object.entries(DIR).map(([k,v])=>opt(k,v,m.diretoria)).join("")}</select><button class="btn sm" data-act="link" data-adm style="${m.email?'':'border-color:var(--chart)'}" title="${esc(m.email||'')}">${m.email?'✓ E-mail':'Definir e-mail'}</button><button class="btn sm" data-act="mv-cat" data-adm>${c==='aspira'?'Efetivar':'Tornar aspira'}</button><button class="btn sm" data-act="mv-ativo" data-adm>${m.ativo===false?'Reativar':'Inativar'}</button><button class="btn sm ghost danger" data-act="del-m" data-adm aria-label="Excluir ${esc(m.nome)}">✕</button></span></li>`).join('')}</ul>`:'<div class="empty">Ninguém aqui ainda.</div>'};
   const ef=S.membros.filter(m=>m.categoria==='efetivo'&&m.ativo!==false).length,as=S.membros.filter(m=>m.categoria==='aspira'&&m.ativo!==false).length;
-  return `<div class="vh"><div><h2>Membros</h2><p>${ef} efetivos e ${as} aspiras ativos · ${S.membros.filter(m=>m.email).length} com e-mail cadastrado. Cada membro entra com esse e-mail Google e vê só a própria Minha área.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap" data-w><button class="btn" data-act="export">Exportar backup</button><label class="btn" for="imp">Importar backup</label><input type="file" id="imp" accept=".json,application/json" hidden></div></div>
-  <div class="panel" style="margin-bottom:20px" data-w><h3>Diretoria (acesso total)</h3><p class="cap">Quem está aqui vê e edita todas as abas. Use o e-mail Google da pessoa.</p>
+  return `<div class="vh"><div><h2>Membros</h2><p>${ef} efetivos e ${as} aspiras ativos · ${S.membros.filter(m=>m.email).length} com e-mail cadastrado. Cada membro entra com esse e-mail Google, vê e edita o painel, e só ele(a) abre a própria Minha área.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap" data-adm><button class="btn" data-act="export">Exportar backup</button><label class="btn" for="imp">Importar backup</label><input type="file" id="imp" accept=".json,application/json" hidden></div></div>
+  <div class="panel" style="margin-bottom:20px" data-adm><h3>Diretoria (acesso total)</h3><p class="cap">Quem está aqui vê e edita todas as abas. Use o e-mail Google da pessoa.</p>
   <ul class="mlist" style="margin-bottom:10px">${[...ADMIN_EMAILS.map(e=>({id:e,fixo:true})),...S.diretoria.filter(d=>!ADMIN_EMAILS.includes(d.id))].map(d=>`<li data-id="${esc(d.id)}"><span class="mn">${esc(d.id)}</span>${d.fixo?'<span class="muted" style="font-size:13px">fixo na configuração</span>':'<button class="btn sm ghost danger" data-act="del-dir" aria-label="Remover">✕</button>'}</li>`).join('')}</ul>
   <form class="addm" id="adddir" style="margin:0"><input id="dir-mail" type="email" placeholder="email@gmail.com" aria-label="E-mail do diretor"><button class="btn pri">Adicionar à diretoria</button></form></div>
-  <form class="addm" id="addm" data-w><input id="m-nome" name="nome" placeholder="Nome do membro" aria-label="Nome do membro"><select id="m-cat" name="categoria" aria-label="Categoria">${opt('efetivo','Efetivo','efetivo')}${opt('aspira','Aspira','')}</select><button class="btn pri">Adicionar</button></form>
+  <form class="addm" id="addm" data-adm><input id="m-nome" name="nome" placeholder="Nome do membro" aria-label="Nome do membro"><select id="m-cat" name="categoria" aria-label="Categoria">${opt('efetivo','Efetivo','efetivo')}${opt('aspira','Aspira','')}</select><button class="btn pri">Adicionar</button></form>
   <div class="mcols"><div><h3 style="margin:0 0 10px">Efetivos</h3>${list('efetivo')}</div><div><h3 style="margin:0 0 10px">Aspiras</h3>${list('aspira')}</div></div>`;
 }
 
@@ -578,35 +580,39 @@ function buildResumo(id){
   const r1=v=>v==null?null:Math.round(v*10)/10;
   return {nome:m.nome,categoria:m.categoria,
     stats:{deb:d.length,dAno:d.filter(r=>r.data>=ano).length,pts:r1(avg(d.map(ptsOf).filter(x=>x!=null))),spk:r1(avg(d.map(r=>Number(r.speaks)).filter(x=>x>0))),last:mine.reduce((a,r)=>r.data>a?r.data:a,'')},
-    casas:CASAS.map(c=>[c,r1(avg(d.filter(r=>r.casa===c).map(ptsOf).filter(x=>x!=null)))]),
+    casas:CASAS.map(c=>({casa:c,v:r1(avg(d.filter(r=>r.casa===c).map(ptsOf).filter(x=>x!=null)))})),
     recent:[...d].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6).map(r=>({data:r.data,evento:r.evento||CTX[r.contexto]||'',casa:r.casa||'',colocacao:r.colocacao||'',speaks:r.speaks||''})),
+    diretoria:m.diretoria||'',dirDem:m.diretoria?S.demandas.filter(x=>x.diretoria===m.diretoria&&x.status!=='concluida'&&!dem.some(y=>y.titulo===x.titulo)).sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999')).slice(0,8).map(x=>({titulo:x.titulo||'',diretoria:x.diretoria,prazo:x.prazo||'',status:x.status||'',responsavel:x.responsavel||''})):[],
     demandas:dem,camps,
     eventos:allItems().filter(i=>(i.f||i.d)>=TODAY).slice(0,6).map(i=>({titulo:i.t,data:i.d,fim:i.f||'',sub:i.s})),
-    tabbys:S.tabbys.filter(t=>t.status!=='encerrado'&&safeUrl(t.url)).map(t=>({nome:t.nome,url:safeUrl(t.url),status:t.status}))};
+    tabbys:S.tabbys.filter(t=>t.status!=='encerrado'&&safeUrl(t.url)).map(t=>({nome:t.nome||'',url:safeUrl(t.url),status:t.status||''}))};
 }
+function dirPick(R){return `<label class="f" style="max-width:260px">Minha diretoria<select id="my-dir" data-mydir>${opt('','Nenhuma',R.diretoria)}${Object.entries(DIR).map(([k,v])=>opt(k,v,R.diretoria)).join('')}</select></label>`}
 function areaHtml(R,pick){
   const s=R.stats,last=s.last;
-  return `<div class="vh"><div><h2>Olá, ${esc(R.nome.split(' ')[0])}</h2><p>${R.categoria==='aspira'?'Aspira':'Efetivo(a)'} da SdDUFC${R.atualizado?' · atualizado em '+esc(fmt(R.atualizado)):''}</p></div>${pick||''}</div>
+  return `<div class="vh"><div><h2>Olá, ${esc(R.nome.split(' ')[0])}</h2><p>${R.categoria==='aspira'?'Aspira':'Efetivo(a)'} da SdDUFC${R.diretoria?' · Diretoria '+esc(DIR[R.diretoria]||''):''}</p></div>${pick||''}</div>
   <div class="sumrow"><div class="stat"><strong>${s.deb}</strong><span>debates registrados (${s.dAno} este ano)</span></div><div class="stat"><strong>${f1(s.pts)}</strong><span>pontos médios por sala</span></div><div class="stat"><strong>${f1(s.spk)}</strong><span>speaks médio</span></div><div class="stat"><strong style="${!last||dias(last,TODAY)>30?'color:var(--acc)':''}">${last?esc(fmt(last)):'–'}</strong><span>última participação</span></div></div>
   <div class="grid2"><div class="panel"><h3>Meus campeonatos</h3><p class="cap">Onde você está na equipe da SdD</p>${R.camps.length?`<ul class="up">${R.camps.map(c=>`<li><button type="button"><span class="dt">${c.inicio?esc(fmt(c.inicio)):'–'}<small>${c.inicio&&c.inicio>=TODAY?'em '+dias(TODAY,c.inicio)+' d':''}</small></span><span><span class="nm">${esc(c.nome)}</span><span class="sub">${esc(c.funcao||'Função a definir')}${c.cidade?' · '+esc(c.cidade):''}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Você ainda não está em nenhuma equipe.</div>'}</div>
   <div class="panel"><h3>Minhas demandas</h3><p class="cap">Pendências em que você é responsável</p>${R.demandas.length?`<ul class="tlist">${R.demandas.map(x=>{const late=x.prazo&&x.prazo<TODAY;return `<li class="task d-${esc(x.diretoria)}" style="grid-template-columns:minmax(0,1fr)"><div><b>${esc(x.titulo)}</b><div class="meta"><span class="tag d-${esc(x.diretoria)}">${esc(DIR[x.diretoria]||'')}</span>${x.status==='andamento'?'<span class="prog">em andamento</span>':''}${x.prazo?`<span class="nw ${late?'late':''}">${late?'atrasada · ':'até '}${esc(fmt(x.prazo))}</span>`:''}</div></div></li>`}).join('')}</ul>`:'<div class="empty">Nada pendente com seu nome.</div>'}</div></div>
   <div class="grid2"><div class="panel"><h3>Últimos debates</h3><p class="cap">Casa, colocação e speaks</p>${R.recent.length?`<div style="overflow-x:auto"><table class="rank"><thead><tr><th>Data</th><th>Evento</th><th>Casa</th><th class="n">Coloc.</th><th class="n">Speaks</th></tr></thead><tbody>${R.recent.map(r=>`<tr><td class="nw">${esc(fmt(r.data))}</td><td>${esc(r.evento)}</td><td>${esc(r.casa)}</td><td class="n">${r.colocacao?esc(r.colocacao)+'º':'–'}</td><td class="n">${r.speaks?esc(r.speaks):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum debate registrado ainda.</div>'}</div>
-  <div class="panel"><h3>Meus pontos por casa</h3><p class="cap">Média de pontos por sala em cada posição</p>${R.casas.map(([c,v])=>`<div class="hb"><b style="text-align:left">${esc(c)}</b><div class="tr"><i style="width:${v==null?0:Math.min(100,v/3*100)}%"></i></div><b>${f1(v)}</b></div>`).join('')}</div></div>
+  <div class="panel"><h3>Meus pontos por casa</h3><p class="cap">Média de pontos por sala em cada posição</p>${(R.casas||[]).map(o=>Array.isArray(o)?{casa:o[0],v:o[1]}:o).map(({casa:c,v})=>`<div class="hb"><b style="text-align:left">${esc(c)}</b><div class="tr"><i style="width:${v==null?0:Math.min(100,v/3*100)}%"></i></div><b>${f1(v)}</b></div>`).join('')}</div></div>
+  ${R.diretoria?`<div class="panel" style="margin-bottom:20px"><h3>Pendências da ${esc(DIR[R.diretoria]||'')}</h3><p class="cap">O que a sua diretoria ainda tem para entregar</p>${(R.dirDem||[]).length?`<ul class="tlist">${R.dirDem.map(x=>{const late=x.prazo&&x.prazo<TODAY;return `<li class="task d-${esc(x.diretoria)}" style="grid-template-columns:minmax(0,1fr)"><div><b>${esc(x.titulo)}</b><div class="meta">${x.responsavel?`<span>${esc(x.responsavel)}</span>`:''}${x.status==='andamento'?'<span class="prog">em andamento</span>':''}${x.prazo?`<span class="nw ${late?'late':''}">${late?'atrasada · ':'até '}${esc(fmt(x.prazo))}</span>`:''}</div></div></li>`}).join('')}</ul>`:'<div class="empty">Nada pendente na sua diretoria.</div>'}</div>`:''}
   <div class="grid2"><div class="panel"><h3>Agenda da SdD</h3><p class="cap">Próximos treinos, reuniões e campeonatos</p>${R.eventos.length?`<ul class="up">${R.eventos.map(i=>`<li><button type="button"><span class="dt">${esc(fmt(i.data))}<small>${dias(TODAY,i.data)<=0?'agora':'em '+dias(TODAY,i.data)+' d'}</small></span><span><span class="nm">${esc(i.titulo)}</span><span class="sub">${esc(i.sub)}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Nada marcado.</div>'}</div>
   <div class="panel"><h3>Tabbys abertos</h3><p class="cap">Chaves e resultados dos torneios</p>${R.tabbys.length?R.tabbys.map(t=>{const u=safeUrl(t.url);return u?`<div class="row" style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><b>${esc(t.nome)}</b><a class="btn pri sm" href="${esc(u)}" target="_blank" rel="noopener">Abrir ↗</a></div>`:''}).join(''):'<div class="empty">Nenhum tabby aberto agora.</div>'}</div></div>`;
 }
 let MYAREA=undefined;
+const myMember=()=>S.membros.find(m=>m.email&&m.email===ME);
 function vEu(){
-  if(RO){
-    if(MYAREA===undefined)return '<div class="empty">Carregando sua área…</div>';
-    if(!MYAREA)return `<div class="vh"><div><h2>Minha área</h2><p>Sua área ainda não foi liberada.</p></div></div><div class="empty">Peça à diretoria para cadastrar o e-mail ${esc(ME)} no seu nome, na lista de membros. Assim que cadastrarem, ela aparece aqui.</div>`;
-    return areaHtml(MYAREA,'');
+  if(!ADMIN){
+    const me=myMember();
+    if(!me)return `<div class="vh"><div><h2>Minha área</h2><p>Carregando…</p></div></div>`;
+    return areaHtml(buildResumo(me.id),dirPick(buildResumo(me.id)));
   }
   const id=ui.eu||lsGet('sdd-eu');const R=buildResumo(id);
   const pick=`<label class="f" style="max-width:340px">Ver a área de<select id="eu-sel" data-eu>${memOpts(id,'Escolha um membro')}</select></label>`;
   if(!R)return `<div class="vh"><div><h2>Minha área</h2><p>Escolha um membro para ver a área exatamente como ele(a) vê.</p></div>${pick}</div>`;
   const m=mem(id);
-  return `<div class="banner" style="background:var(--panel);border-color:var(--line)">${m.email?'Este membro vê esta página quando entra com '+esc(m.email)+'.':'Este membro ainda não tem e-mail cadastrado. Cadastre na aba Membros para ele(a) ter acesso.'}</div>`+areaHtml(R,pick);
+  return `<div class="banner" style="background:var(--panel);border-color:var(--line)">${m.email?'Só '+esc(m.nome)+' abre esta área, entrando com '+esc(m.email)+'. A diretoria também pode ver por aqui.':'Este membro ainda não tem e-mail cadastrado. Cadastre na aba Membros para ele(a) ter acesso.'}</div>`+areaHtml(R,pick);
 }
 
 /* ---------- vínculo de contas e sincronização ---------- */
@@ -614,27 +620,26 @@ let CANEDIT=false,ME='';const lastSync={};let syncT=null,syncing=false,syncPrime
 const ADMIN_EMAILS=((window.SDD_CONFIG&&window.SDD_CONFIG.adminEmails)||[]).map(e=>String(e).trim().toLowerCase());
 const okMail=e=>/^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]+$/.test(e);
 function linkForm(m){
-  openModal('E-mail de '+m.nome,`<p class="muted" style="margin:0 0 10px;font-size:14px">O e-mail da conta Google com que ${esc(m.nome)} vai entrar no painel. Com ele, a pessoa vê só a própria Minha área.</p><label class="f">E-mail<input type="email" name="email" id="lk-mail" value="${esc(m.email)}" placeholder="nome@gmail.com"></label>`,acts(!!m.email),async f=>{
+  openModal('E-mail de '+m.nome,`<p class="muted" style="margin:0 0 10px;font-size:14px">O e-mail da conta Google com que ${esc(m.nome)} vai entrar no painel. Com ele, a pessoa entra no painel, pode ver e editar tudo, e só ela abre a própria Minha área.</p><label class="f">E-mail<input type="email" name="email" id="lk-mail" value="${esc(m.email)}" placeholder="nome@gmail.com"></label>`,acts(!!m.email),async f=>{
     const e=(f.email||'').trim().toLowerCase();
     if(e&&!okMail(e)){toast('E-mail inválido.');return false}
     const dup=e&&S.membros.find(x=>x.email===e&&x.id!==m.id);if(dup){toast('Esse e-mail já é de '+dup.nome);return false}
-    if(m.email&&m.email!==e){try{await db.collection('pessoal').doc(m.email).delete()}catch(err){}delete lastSync[m.email]}
     await patch('membros',m.id,{email:e});toast(e?'E-mail salvo':'E-mail removido');scheduleSync()});
-  bindDel(async()=>{try{await db.collection('pessoal').doc(m.email).delete()}catch(err){}delete lastSync[m.email];await patch('membros',m.id,{email:''})});
+  bindDel(async()=>{await patch('membros',m.id,{email:''});scheduleSync()});
 }
 function scheduleSync(){if(!CANEDIT||!db)return;clearTimeout(syncT);syncT=setTimeout(doSync,2000)}
 async function doSync(){
   if(syncing){scheduleSync();return}syncing=true;
-  try{for(const m of S.membros){if(!m.email)continue;const k=m.email;const ref=db.collection('pessoal').doc(k);const R=buildResumo(m.id);const js=JSON.stringify(R);
-      if(lastSync[k]===undefined){try{const g=await ref.get();if(g.exists){const o={...g.data()};delete o.atualizado;lastSync[k]=JSON.stringify(o)}}catch(e){}}
-      if(lastSync[k]!==js){await ref.set({...R,atualizado:TODAY});lastSync[k]=js}}
-    syncPrimed=true;
-  }catch(e){console.warn('sync',e)}finally{syncing=false}
+  try{
+    const want={};S.membros.forEach(m=>{if(m.email&&m.ativo!==false)want[m.email]=m.id});
+    for(const [e,mid] of Object.entries(want)){const cur=S.acesso.find(a=>a.id===e);if(!cur||cur.membroId!==mid)await db.collection('acesso').doc(e).set({membroId:mid})}
+    for(const a of S.acesso){if(!want[a.id])await db.collection('acesso').doc(a.id).delete()}
+  }catch(e){console.warn('sync',e);toast('Não consegui atualizar os acessos: '+(e&&e.message||e))}finally{syncing=false}
 }
 
 /* ---------- render & eventos ---------- */
 const V={eu:vEu,acompanhamento:vAcomp,demandas:vDemandas,calendario:vCalendario,campeonatos:vCampeonatos,tabbys:vTabbys,desempenho:vDesempenho,membros:vMembros};
-const cur=()=>RO?'eu':V[location.hash.slice(1)]?location.hash.slice(1):'demandas';
+const cur=()=>V[location.hash.slice(1)]?location.hash.slice(1):(ADMIN?'demandas':'eu');
 function render(force){
   const a=document.activeElement;
   if(!force&&a&&view.contains(a)&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)){pending=true;return}
@@ -653,6 +658,7 @@ view.addEventListener('click',async e=>{
   const act=b.dataset.act,row=b.closest('[data-id]'),id=b.dataset.id||row?.dataset.id;
   if(act==='copy-tabby'){try{await navigator.clipboard.writeText(b.dataset.url);toast('Link copiado')}catch(err){toast('Não deu para copiar. Segure o link para copiar.')}return}
   if(RO&&!/^(cal-|toggle-fim|goto-camp|eq-view)/.test(act)){toast('Só a diretoria edita o painel.');return}
+  if(!ADMIN&&['export','del-dir','link','mv-cat','mv-ativo','del-m'].includes(act)){toast('Só a diretoria mexe na lista de membros.');return}
   if(act==='eq-view'){const c=S.campeonatos.find(x=>x.id===id);const eq=(c?.equipe||[]);openModal('Equipe: '+(c?.nome||''),eq.length?`<ul style="margin:0;padding-left:18px">${eq.map(x=>`<li><b>${esc(mname(x.membroId))}</b>${x.funcao?' · '+esc(x.funcao):''}</li>`).join('')}</ul>`:'<p class="muted">Equipe ainda não definida.</p>','<button type="button" class="btn" data-m="cancel">Fechar</button>',null);return}
   if(act==='eu-set')return;
   if(act==='new-tabby')tabbyForm();
@@ -684,6 +690,8 @@ function confirmDel(msg,fn){openModal('Confirmar exclusão',`<p style="margin:0"
 view.addEventListener('input',e=>{if(e.target.id==='busca'){ui.busca=e.target.value;const l=$('#dlists');if(l)l.innerHTML=dLists()}});
 view.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset.mydir!==undefined){const me=myMember();if(me){patch('membros',me.id,{diretoria:t.value});toast(t.value?'Diretoria salva: '+DIR[t.value]:'Diretoria removida')}return}
+  if(t.dataset.mdir!==undefined){const li=t.closest('[data-id]');if(li&&ADMIN)patch('membros',li.dataset.id,{diretoria:t.value});return}
   if(t.dataset.eu!==undefined){ui.eu=t.value;lsSet('sdd-eu',t.value);render(true);return}
   if(t.dataset.filter){ui[t.dataset.filter]=t.value;render(true);return}
   if(t.dataset.f){const row=t.closest('tr[data-id]');if(!row)return;let v=t.value;if(t.type==='number')v=v===''?'':Number(v);patch('campeonatos',row.dataset.id,{[t.dataset.f]:v})}
@@ -708,21 +716,20 @@ async function boot(){
   if(!window.firebase||!cfg||!cfg.apiKey||/COLE/.test(cfg.apiKey)){$('#tabs').style.display='none';view.innerHTML='<div class="empty" style="margin-top:40px">O Firebase ainda não foi configurado. Preencha o arquivo firebase-config.js seguindo o LEIAME.</div>';setSync('');return}
   firebase.initializeApp(cfg);db=firebase.firestore();
   firebase.auth().onAuthStateChanged(async user=>{
-    UNSUB.forEach(f=>{try{f()}catch(e){}});UNSUB=[];COLS.forEach(c=>S[c]=[]);MYAREA=undefined;RO=false;CANEDIT=false;
+    UNSUB.forEach(f=>{try{f()}catch(e){}});UNSUB=[];COLS.forEach(c=>S[c]=[]);MYAREA=undefined;RO=false;CANEDIT=false;ADMIN=false;
     if(!user){loginScreen();return}
     ME=(user.email||'').toLowerCase();
     $('#tabs').style.display='';$('#who').innerHTML='';const out=document.createElement('button');out.className='btn sm ghost';out.style.color='#e9e6df';out.textContent='Sair ('+ME+')';out.onclick=()=>firebase.auth().signOut();$('#who').appendChild(out);
     let admin=ADMIN_EMAILS.includes(ME);
     if(!admin){try{admin=(await db.collection('diretoria').doc(ME).get()).exists}catch(e){admin=false}}
-    if(!admin){
-      RO=true;document.body.classList.add('ro');$('#note').innerHTML='';if(location.hash&&location.hash!=='#eu')location.hash='eu';render(true);
-      const tm=setTimeout(()=>{if(MYAREA===undefined){MYAREA=null;render(true)}},10000);
-      UNSUB.push(db.collection('pessoal').doc(ME).onSnapshot(sn=>{if(sn.metadata.fromCache&&!sn.exists)return;clearTimeout(tm);MYAREA=sn.exists?sn.data():null;setSync('Sincronizado');render(true)},()=>{clearTimeout(tm);MYAREA=null;render(true)}));
-      return;
-    }
-    CANEDIT=true;document.body.classList.remove('ro');$('#note').innerHTML='';render(true);
-    let got=0;const timer=setTimeout(()=>{if(got<COLS.length)setSync('Sem resposta do servidor ainda…')},10000);
-    COLS.forEach(c=>{let first=true;UNSUB.push(db.collection(c).onSnapshot(s=>{S[c]=s.docs.map(x=>({...x.data(),id:x.id}));if(first&&!s.metadata.fromCache){first=false;got++;if(got===COLS.length){clearTimeout(timer);setSync('Sincronizado')}}render();if(got===COLS.length)scheduleSync()},err=>{clearTimeout(timer);setSync(err&&err.code==='permission-denied'?'Sem permissão':'Conexão perdida')}))});
+    let member=false;
+    if(!admin){try{member=(await db.collection('acesso').doc(ME).get()).exists}catch(e){member=false}}
+    ADMIN=admin;CANEDIT=admin;RO=false;document.body.classList.remove('ro');document.body.classList.toggle('member',!admin);$('#note').innerHTML='';
+    if(!admin&&!member){$('#tabs').style.display='none';setSync('');view.innerHTML=`<div class="vh"><div><h2>Acesso ainda não liberado</h2><p>Peça à diretoria para cadastrar o e-mail ${esc(ME)} no seu nome, na aba Membros. Depois é só recarregar esta página.</p></div></div>`;return}
+    render(true);
+    const cols=admin?COLS:MCOLS;
+    let got=0;const timer=setTimeout(()=>{if(got<cols.length)setSync('Sem resposta do servidor ainda…')},10000);
+    cols.forEach(c=>{let first=true;UNSUB.push(db.collection(c).onSnapshot(s=>{S[c]=s.docs.map(x=>({...x.data(),id:x.id}));if(first&&!s.metadata.fromCache){first=false;got++;if(got===cols.length){clearTimeout(timer);setSync('Sincronizado')}}render();if(admin&&got===cols.length)scheduleSync()},err=>{clearTimeout(timer);setSync(err&&err.code==='permission-denied'?'Sem permissão':'Conexão perdida')}))});
   });
 }
 boot();
